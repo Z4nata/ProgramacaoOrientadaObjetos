@@ -1,18 +1,18 @@
 {
-  "name": "projeto",
+  "name": "sistema-combate-rpg",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Sistema de combate por turnos em TypeScript, modelado com interfaces e composição.",
+  "main": "dist/main.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "tsc",
+    "start": "node dist/main.js"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": ["typescript", "poo", "rpg"],
+  "author": "Felipe Zanata",
   "license": "ISC",
   "type": "commonjs",
   "devDependencies": {
     "@types/node": "^22.20.3",
-    "ts-node": "^10.9.2",
     "typescript": "^7.0.2"
   }
 }
