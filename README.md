@@ -4,6 +4,15 @@ Projetos da disciplina de Programação Orientada a Objetos — Ciência da Comp
 
 ## Sistema de combate de RPG
 
+O projeto foi feito em duas etapas, cada uma em sua própria pasta:
+
+| Pasta | Conteúdo |
+| --- | --- |
+| [`SistemaCombateRPG/`](SistemaCombateRPG) | **Parte 1**: jogo, personagens, armas, cooldown, inventário e efeitos |
+| [`SistemaCombateRPG-Parte2/`](SistemaCombateRPG-Parte2) | **Parte 2**: habilidades especiais, mana no personagem e ataques em área |
+
+## Parte 1: combate por turnos
+
 Combate por turnos em **TypeScript**: personagens atacam com armas diferentes, sofrem efeitos
 que duram vários turnos (veneno, regeneração) e sobem de nível ao derrotar inimigos.
 
@@ -59,7 +68,7 @@ classDiagram
     Jogo o-- AtualizavelPorTurno
 ```
 
-### Conceitos aplicados
+### Conceitos aplicados (Parte 1)
 
 | Conceito | Onde aparece |
 | --- | --- |
@@ -115,4 +124,126 @@ SistemaCombateRPG/
   AtualizavelPorTurno.ts   interface de tudo que reage à passagem de turno
   CoolDown.ts              recarga usada pelas armas
   Inventario.ts Item.ts
+```
+
+## Parte 2: habilidades especiais
+
+Os personagens agora têm **mana** e podem aprender **habilidades especiais**. A extensão foi
+feita sem mudar o `Jogo`: ele continua só avisando que o turno passou, e cada personagem
+repassa o aviso para a arma e para as próprias habilidades.
+
+| Habilidade | Efeito | Mana | Cooldown |
+| --- | --- | --- | --- |
+| Bola de Fogo | 40 de dano | 20 | 2 turnos |
+| Cura | recupera 30 de vida | 15 | 1 turno |
+| Golpe Poderoso | 60 de dano | 0 | 3 turnos |
+| Explosão | 20 de dano em todos os inimigos | 25 | 3 turnos |
+| Bomba de Cura *(autoral)* | recupera 15 de vida de todo o grupo | 35 | 4 turnos |
+
+```mermaid
+classDiagram
+    direction LR
+    class AtualizavelPorTurno {
+        <<interface>>
+        +novoTurno()
+    }
+    class Habilidade {
+        <<interface>>
+        +nome
+        +realizarHabilidade(utilizador, alvo)
+        +podeUsar(utilizador) boolean
+    }
+    class Alvo {
+        <<interface>>
+        +receberDano(dano)
+        +curar(cura)
+    }
+    class HabilidadeControle {
+        -custo
+        +podeUsar(realizador) boolean
+        +contabilizarHabilidade(realizador)
+        +novoTurno()
+    }
+    class Grupo {
+        -alvos
+    }
+    class Personagem {
+        -mana
+        -habilidades
+        +adicionarHabilidade(h)
+        +usarHabilidade(h, alvo)
+        +temMana(qnt) boolean
+        +gastarMana(qnt)
+        +recarregarMana(qnt)
+    }
+    AtualizavelPorTurno <|-- Habilidade
+    AtualizavelPorTurno <|.. Personagem
+    Alvo <|.. Personagem
+    Alvo <|.. Grupo
+    Grupo o-- Alvo
+    Habilidade <|.. BolaDeFogo
+    Habilidade <|.. Cura
+    Habilidade <|.. GolpePoderoso
+    Habilidade <|.. Explosao
+    Habilidade <|.. BombaDeCura
+    BolaDeFogo *-- HabilidadeControle
+    Cura *-- HabilidadeControle
+    GolpePoderoso *-- HabilidadeControle
+    Explosao *-- HabilidadeControle
+    BombaDeCura *-- HabilidadeControle
+    HabilidadeControle *-- CoolDown
+    Personagem o-- Habilidade
+```
+
+### Conceitos aplicados (Parte 2)
+
+| Conceito | Onde aparece |
+| --- | --- |
+| **Abstração** | `Habilidade` define o contrato de toda habilidade; `Alvo` define o que pode receber dano ou cura |
+| **Composição** | cada habilidade compõe um `HabilidadeControle`, que compõe um `CoolDown`; a regra de mana e recarga existe em um único lugar |
+| **Polimorfismo** | `Personagem.usarHabilidade()` chama `realizarHabilidade()` sem `if`, `switch` ou `instanceof` para saber qual habilidade é |
+| **Delegação** | `Jogo → Personagem → Habilidade → HabilidadeControle → CoolDown`: cada um só repassa o turno para o próximo |
+| **Composite** | `Grupo` também é um `Alvo` e repassa dano ou cura para cada membro; por isso a Explosão acerta vários inimigos sem nenhuma condição especial |
+| **Encapsulamento** | a mana é privada e só muda por `gastarMana` e `recarregarMana`; o cooldown fica escondido dentro do controle |
+
+### Como rodar
+
+```bash
+cd SistemaCombateRPG-Parte2
+npm install
+npm run build
+npm start
+```
+
+`npm start` roda a partida de exemplo de [`main2.ts`](SistemaCombateRPG-Parte2/main2.ts). Saída:
+
+```text
+Goblin sofreu 40 de dano
+Habilidade em tempo de CoolDown
+Goblin sofreu 40 de dano
+Goblin sofreu 60 de dano
+Goblin sofreu 20 de dano
+Golem sofreu 20 de dano
+Flor recebeu 30 de cura - Vida atual: 30
+Felipe sofreu 45 de dano
+Felipe recebeu 15 de cura - Vida atual: 70
+Flor recebeu 15 de cura - Vida atual: 30
+Otavio recebeu 15 de cura - Vida atual: 100
+Sem mana suficiente
+Flor nao possui Bola de Fogo
+```
+
+### Estrutura (arquivos novos ou alterados)
+
+```text
+SistemaCombateRPG-Parte2/
+  main2.ts                 partida de exemplo com habilidades
+  Habilidade.ts            interface das habilidades
+  HabilidadeControle.ts    custo de mana + cooldown, compartilhado pelas habilidades
+  BolaDeFogo.ts Cura.ts GolpePoderoso.ts Explosao.ts BombaDeCura.ts
+  Alvo.ts                  interface de quem recebe dano ou cura
+  Grupo.ts                 vários alvos tratados como um só
+  Personagem.ts            agora com mana e lista de habilidades
+  Arma.ts Varinha.ts       a varinha passa a gastar a mana do personagem
+  CoolDown.ts              conta o turno atual na recarga
 ```
